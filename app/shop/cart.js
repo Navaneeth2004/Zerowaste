@@ -230,7 +230,7 @@ export const Cart = ({ navigation }) => {
               onPress={() => navigation.navigate('Shop')}
               style={styles.continueShopping}
             >
-              <Text style={styles.continueShoppingText}>Continue Shop</Text>
+              <Text style={styles.continueShoppingText}>Continue Shopping</Text>
             </TouchableOpacity>
           </View>
         )}
