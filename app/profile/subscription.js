@@ -1,278 +1,205 @@
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ImageBackground, Linking } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, ScrollView, Dimensions } from 'react-native'
+import React from 'react'
+import { TouchableOpacity } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
-import { Picker } from '@react-native-picker/picker';
-import * as ImagePicker from 'expo-image-picker';
-import React, { useEffect, useState, useLayoutEffect } from 'react';
+import background from '../../assets/profile/profile.jpg'
 
-import BackgroundImage from '../../assets/profile/profile.jpg';
+const { width, height } = Dimensions.get('window');
 
-export const Subscription = ({ navigation }) => {
+export const Subscription = ({navigation}) => {
+  return (
+    <ImageBackground 
+      source={background} 
+      style={styles.imagebackground}
+      resizeMode="cover"
+    >
+      <LinearGradient
+        colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
+        style={styles.gradientOverlay}
+        locations={[0, 0.6, 1]}
+      />
+        <View style={styles.maincontainer}>
+          <BlurView intensity={30} tint="dark" style={styles.blurContainer}>
+            <View style={styles.container}>
+              <View style={styles.iconContainer}>
+                <FontAwesome name="calendar-check-o" size={40} color="#4CAF50" />
+              </View>
+              
+              <Text style={styles.title}>
+                Auto-Pickup Scheduler
+              </Text>
+              
+              <Text style={styles.subtitle}>
+                Set It and Forget It!
+              </Text>
 
-    const [upidetails,setupisetails] = useState({
-        amount:5,
-        companyname:'ZeroWaste',
-        upiid:'shynimol1974@okaxis',
-        text:'Subscription',
-    })
+              <View style={styles.divider} />
 
-    const [title, setTitle] = useState('');
-    const [wasteLimit, setWasteLimit] = useState(false);
-    const [wasteArray, setWasteArray] = useState([{ id: 1, category: '', description: '', weight: '', image: null }]);
+              <Text style={styles.description}>
+                Tired of listing your waste every day? With our Auto-Pickup Scheduler,
+                you can easily set up recurring waste pickups at intervals that suit you.
+              </Text>
 
-    const pickImage = async (index) => {
-        let permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permission.granted) {
-            alert("Permission is required to access the gallery!");
-            return;
-        }
-
-        let resultImage = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        });
-
-        if (!resultImage.canceled) {
-            const newWasteArray = [...wasteArray];
-            newWasteArray[index].image = resultImage.assets[0].uri;
-            setWasteArray(newWasteArray);
-        }
-    };
-
-    useEffect(() => {
-        if (wasteArray.length === 5) {
-            setWasteLimit(true);
-        }
-    }, [wasteArray]);
-
-    const addItem = () => {
-        setWasteArray([...wasteArray, { id: wasteArray.length + 1, category: '', description: '', weight: '', image: null }]);
-    };
-
-    const handleTextChange = (index, field, value) => {
-        const newWasteArray = [...wasteArray];
-        newWasteArray[index][field] = value;
-        setWasteArray(newWasteArray);
-    };
-
-    const removeImage = (index) => {
-        const newWasteArray = [...wasteArray];
-        newWasteArray[index].image = null;
-        setWasteArray(newWasteArray);
-    };
-
-    useLayoutEffect(() => {
-        navigation.setOptions({
-            headerRight: () => (
-                <TouchableOpacity>
-                    <FontAwesome name='save' size={30} color='black' style={{ marginRight: 15 }} />
-                </TouchableOpacity>
-            ),
-        });
-    }, [navigation]);
-
-    const initiateUpiPayment = async () => {
-
-        const upiLink = `upi://pay?pa=${upidetails.upiid}&pn=${upidetails.companyname}&am=${upidetails.amount}&cu=INR&tn=${upidetails.text}`;
-    
-        try {
-          const supported = await Linking.canOpenURL(upiLink);
-    
-          if (supported) {
-            // Open the UPI app
-            await Linking.openURL(upiLink);
-          } else {
-            Alert.alert("No UPI app installed", "Please install a UPI app to proceed with the payment.");
-          }
-        } catch (error) {
-          console.error("Error opening UPI app: ", error);
-          Alert.alert("Payment Error", "An error occurred while trying to initiate the UPI payment.");
-        }
-      };
-
-    return (
-        <ImageBackground source={BackgroundImage} style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
-                <View style={styles.postContainer}>
-                    <TextInput
-                        style={styles.titleBox}
-                        onChangeText={setTitle}
-                        placeholder='Title'
-                        placeholderTextColor="black"
-                    />
-                    {wasteArray.map((item, index) => (
-                        <View key={index} style={styles.wasteTextBox}>
-                            <Text style={styles.countText}>No. {index + 1}</Text>
-                            <View style={styles.textBoxSelect}>
-                                <Picker
-                                    selectedValue={item.category}
-                                    onValueChange={(itemValue) => handleTextChange(index, 'category', itemValue)}
-                                    style={styles.picker}
-                                >
-                                    <Picker.Item label='Select Category' value="" />
-                                    <Picker.Item label='Plastic' value="Plastic" />
-                                    <Picker.Item label='Cardboard' value="Cardboard" />
-                                    <Picker.Item label='Metal' value="Metal" />
-                                </Picker>
-                            </View>
-                            <TextInput
-                                style={[styles.textBox, { height: 90 }]}
-                                onChangeText={(text) => handleTextChange(index, 'description', text)}
-                                multiline={true}
-                                placeholder='Description'
-                                placeholderTextColor="#B0BEC5"
-                            />
-                            <TextInput
-                                style={styles.textBox}
-                                onChangeText={(text) => handleTextChange(index, 'weight', text)}
-                                placeholder='Estimated Weight'
-                                placeholderTextColor="#B0BEC5"
-                            />
-                            <View style={styles.imageContainer}>
-                                <TouchableOpacity
-                                    style={styles.imageButton}
-                                    onPress={() => pickImage(index)}
-                                >
-                                    <FontAwesome name='image' size={45} color="white" />
-                                    <Text style={styles.imageButtonText}>{item.image ? "Change Image" : "Select Image"}</Text>
-                                </TouchableOpacity>
-                                {item.image ? (
-                                    <TouchableOpacity onPress={() => removeImage(index)}>
-                                        <FontAwesome name='close' size={30} color="#C03A3A" />
-                                    </TouchableOpacity>
-                                ) : null}
-                            </View>
-                            <TouchableOpacity onPress={initiateUpiPayment}>
-                                <Text>Subscribe</Text>
-                            </TouchableOpacity>
-                        </View>
-                    ))}
-                    {!wasteLimit && (
-                        <TouchableOpacity onPress={addItem} style={styles.addButton}>
-                            <FontAwesome name='plus' size={30} color="white" />
-                            <Text style={styles.addButtonText}>Add Another Item</Text>
-                        </TouchableOpacity>
-                    )}
+              <View style={styles.featuresContainer}>
+                <View style={styles.featureItem}>
+                  <FontAwesome name="clock-o" size={20} color="#4CAF50" />
+                  <Text style={styles.featureText}>Daily or Weekly Pickups</Text>
                 </View>
-            </ScrollView>
-        </ImageBackground>
-    );
-};
+                <View style={styles.featureItem}>
+                  <FontAwesome name="refresh" size={20} color="#4CAF50" />
+                  <Text style={styles.featureText}>Automatic Scheduling</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <FontAwesome name="check-circle" size={20} color="#4CAF50" />
+                  <Text style={styles.featureText}>Hassle-free Management</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('Payment')} 
+                style={styles.button}
+              >
+                <LinearGradient
+                  colors={['#4CAF50', '#45a049']}
+                  style={styles.buttonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={styles.buttonText}>Get Started</Text>
+                  <FontAwesome name="arrow-right" size={16} color="#fff" style={styles.buttonIcon} />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </BlurView>
+        </View>
+    </ImageBackground>
+  )
+}
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
+  imagebackground: {
+    flex: 1,
+    width: width,
+    height: height,
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  maincontainer: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  blurContainer: {
+    width: '100%',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  container: {
+    width: '100%',
+    alignItems: 'center',
+    padding: 24,
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.3)',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#4CAF50',
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  divider: {
+    width: 60,
+    height: 4,
+    backgroundColor: '#4CAF50',
+    borderRadius: 2,
+    marginBottom: 20,
+  },
+  description: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#E0E0E0',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  featuresContainer: {
+    width: '100%',
+    marginBottom: 30,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.2)',
+  },
+  featureText: {
+    color: '#E0E0E0',
+    marginLeft: 12,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  button: {
+    width: '100%',
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
     },
-    scrollContainer: {
-        flexGrow: 1,
-        paddingVertical: 20,
-        paddingHorizontal: 20,
-    },
-    postContainer: {
-        flex: 1,
-        alignItems: 'center',
-        marginTop: 30,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        borderRadius: 12,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
-    },
-    titleBox: {
-        borderColor: '#B0BEC5',
-        borderWidth: 1,
-        width: "100%",
-        height: 40,
-        paddingLeft: 10,
-        borderRadius: 8,
-        marginBottom: 80,
-        backgroundColor: 'white',
-    },
-    textBox: {
-        borderColor: '#B0BEC5',
-        borderWidth: 1,
-        width: "100%",
-        height: 40,
-        paddingLeft: 10,
-        borderRadius: 8,
-        marginBottom: 20,
-        backgroundColor: 'white',
-        textAlignVertical: 'top',
-        paddingTop:8
-    },
-    textBoxSelect: {
-        borderColor: '#B0BEC5',
-        borderWidth: 1,
-        width: "100%",
-        borderRadius: 8,
-        marginBottom: 20,
-        backgroundColor: 'white',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    wasteTextBox: {
-        width: "100%",
-        alignItems: 'center',
-    },
-    imageContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        width: '100%',
-    },
-    imageButton: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 120,
-        height: 75,
-        borderRadius: 10,
-        backgroundColor: '#4CAF50',
-        marginBottom: 70,
-        borderColor: '#B0BEC5',
-        borderWidth: 1,
-    },
-    imageButtonText: {
-        color: 'white',
-        marginTop: 5,
-        fontWeight: 'bold',
-    },
-    addButton: {
-        marginBottom: 30,
-        backgroundColor: '#1976D2',
-        borderRadius: 50,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    addButtonText: {
-        color: 'white',
-        marginLeft: 10,
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-    countText: {
-        fontSize: 20,
-        marginBottom: 10,
-        width: "100%",
-        textAlign: 'center',
-        height: 45,
-        fontWeight: 'bold',
-        backgroundColor: '#4CAF50',
-        borderRadius: 10,
-        color: '#fff',
-    },
-    picker: {
-        height: 40,
-        width: '100%',
-        color: '#000',
-    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  buttonGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  buttonIcon: {
+    marginLeft: 8,
+  },
+  editButton: {
+    backgroundColor: '#4CAF50',
+  },
+  deleteButton: {
+    backgroundColor: '#FF6B6B',
+  },
 });

@@ -1,0 +1,19 @@
+          <Stack.Screen
+            name="Schedule"
+            component={Schedule}
+            options={({ navigation }) => ({
+              headerLeft: () => (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('BaseProfile')}
+                  style={{ marginLeft: 15 }}
+                >
+                  <FontAwesome name="arrow-left" size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              ),
+              title: 'Schedule',
+              headerStyle: {
+                backgroundColor: '#000', 
+              },
+              headerTintColor: '#FFFFFF', 
+            })}
+          />

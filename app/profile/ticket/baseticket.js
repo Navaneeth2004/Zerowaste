@@ -1,71 +1,156 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
-import React from 'react';
+//Importing important libraries
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, ActivityIndicator, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import Toast from 'react-native-toast-message';
+import { useUser } from '../../storage';
 
-import BackgroundImage from '../../../assets/profile/profile.jpg'; // Replace with your actual image URL
+//Connecting to the database
+import PocketBase from 'pocketbase';
+const pb = new PocketBase('https://zero.pockethost.io');
+
+//Importing background image
+import BackgroundImage from '../../../assets/profile/profile2.jpg';
+
+//Setting the colour of the status
+const getStatusColor = (status) => {
+    switch(status.toLowerCase()) {
+        case 'open':
+            return '#00b894';
+        case 'closed':
+            return '#d63031';
+        case 'in progress':
+            return '#0984e3';
+        default:
+            return '#636e72';
+    }
+};
 
 export const BaseTicket = ({ navigation }) => {
-    const ticketDict = {
-        301: { type: 'Bug', subject: 'App Crashes on Startup', date: '15-Sep-2024', status: 'Open', resolveDate: null },
-        302: { type: 'Feature Request', subject: 'Add Dark Mode', date: '16-Sep-2024', status: 'In Progress', resolveDate: null },
-        303: { type: 'Support', subject: 'Issue with Payment Gateway', date: '17-Sep-2024', status: 'Resolved', resolveDate: '18-Sep-2024' },
-        304: { type: 'Bug', subject: 'Error on Checkout Page', date: '18-Sep-2024', status: 'Open', resolveDate: null },
-        305: { type: 'Feature Request', subject: 'Improve Search Functionality', date: '19-Sep-2024', status: 'Pending', resolveDate: null },
-        306: { type: 'Support', subject: 'User Login Issues', date: '20-Sep-2024', status: 'In Progress', resolveDate: null },
-        307: { type: 'Bug', subject: 'Broken Link on Homepage', date: '21-Sep-2024', status: 'Resolved', resolveDate: '22-Sep-2024' },
-        308: { type: 'Support', subject: 'Incorrect Order Details', date: '22-Sep-2024', status: 'Open', resolveDate: null }
+    const { userData } = useUser();//Importing local storage
+    const [ticketDict, setticketDict] = useState([]);
+    const [loading, setloading] = useState(false);
+
+    //Importing tickets from the database
+    useEffect(() => {
+        setloading(true);
+        pb.collection('ticket').getFullList(200, { filter: `user_id="${userData.id}"` })
+            .then((record) => {
+                setticketDict(record);
+            })
+            .catch((error) => {
+                console.log("Error occured while fetching tickets: ", error.data);
+                Toast.show({
+                    text1: "Error occurred while fetching tickets.",
+                    type: "error",
+                    position: "top"
+                });
+            })
+            .finally(() => {
+                setloading(false);
+            });
+    }, []);
+
+    //Converting date to another format
+    const formatDate = (dateString) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
+
+    //To handle clipboard functionality
+    const handleCopyId = (id) => {
+        Clipboard.setString(id.toString());
+        setCopiedId(id);
+        
+        // Reset the copied state after 2 seconds
+        setTimeout(() => {
+            setCopiedId(null);
+        }, 2000);
     };
 
     return (
         <ImageBackground source={BackgroundImage} style={styles.background}>
-            <BlurView intensity={80} style={styles.blurView}>
+            <BlurView intensity={100} tint="dark" style={styles.blurView}>
+                {loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#fff" />
+                        <Text style={styles.loadingText}>Loading tickets...</Text>
+                    </View>
+                ) : null}
+                
                 <ScrollView contentContainerStyle={styles.scrollView}>
-                    {Object.entries(ticketDict).length > 0 ? (
-                        Object.entries(ticketDict).map(([id, item]) => (
-                            <TouchableOpacity onPress={() => navigation.navigate('Ticket Name')} key={id} style={styles.card}>
-                                <View style={styles.cardContent}>
-                                    <View style={styles.headerRow}>
-                                        <Text style={styles.headingText}>ID: {id}</Text>
-                                        <TouchableOpacity style={styles.icon}>
-                                            <FontAwesome name='copy' size={16} color='#6a3e82' />
-                                        </TouchableOpacity>
+                    {ticketDict.length > 0 ? (
+                        ticketDict.map((item) => (
+                            <TouchableOpacity 
+                                //Upon on press going to another screen and sending the ticket id as well
+                                onPress={() => navigation.navigate('Ticket Name', { id: item.id })}
+                                key={item.id} 
+                                style={styles.card}
+                            >
+                                <LinearGradient
+                                    colors={['rgba(32, 32, 32, 0.9)', 'rgba(24, 24, 24, 0.95)']}
+                                    style={styles.cardGradient}
+                                >
+                                    <View style={styles.statusBar}>
+                                        <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
+                                        <Text style={styles.statusText}>{item.status}</Text>
                                     </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Type:</Text>
-                                        <Text style={styles.detail}>{item.type}</Text>
+
+                                    <View style={styles.cardContent}>
+                                        <View style={styles.headerRow}>
+                                            <Text style={styles.headingText}>#{item.id}</Text>
+                                            <TouchableOpacity style={styles.iconButton}>
+                                                <FontAwesome name='copy' size={16} color='#6c5ce7' />
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        <Text style={styles.subjectText} numberOfLines={2}>
+                                            {item.subject}
+                                        </Text>
+
+                                        <View style={styles.detailsContainer}>
+                                            <View style={styles.detailItem}>
+                                                <FontAwesome name='tag' size={14} color='#a4b0be' />
+                                                <Text style={styles.detailText}>{item.tickettype}</Text>
+                                            </View>
+                                            
+                                            <View style={styles.detailItem}>
+                                                <FontAwesome name='calendar' size={14} color='#a4b0be' />
+                                                <Text style={styles.detailText}>{formatDate(item.created)}</Text>
+                                            </View>
+
+                                            {item.resolvedate && (
+                                                <View style={styles.detailItem}>
+                                                    <FontAwesome name='check-circle' size={14} color='#a4b0be' />
+                                                    <Text style={styles.detailText}>{formatDate(item.resolvedate)}</Text>
+                                                </View>
+                                            )}
+                                        </View>
                                     </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Subject:</Text>
-                                        <Text style={styles.detail}>{item.subject}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Status:</Text>
-                                        <Text style={styles.detail}>{item.status}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Date:</Text>
-                                        <Text style={styles.detail}>{item.date}</Text>
-                                    </View>
-                                    <View style={styles.detailRow}>
-                                        <Text style={styles.label}>Resolve Date:</Text>
-                                        <Text style={styles.detail}>{item.resolveDate || 'N/A'}</Text>
-                                    </View>
-                                </View>
+                                </LinearGradient>
                             </TouchableOpacity>
                         ))
                     ) : (
-                        <View style={styles.nothingHere}>
-                            <Text style={styles.nothingText}>Nothing here...</Text>
+                        //If tickets were not found
+                        <View style={styles.emptyContainer}>
+                            <FontAwesome name='ticket' size={50} color='rgba(255,255,255,0.3)' />
+                            <Text style={styles.emptyText}>No tickets found</Text>
+                            <Text style={styles.emptySubText}>Create a new ticket to get started</Text>
                         </View>
                     )}
                 </ScrollView>
-                <TouchableOpacity onPress={() => navigation.navigate('Create Ticket')} style={styles.addButton}>
-                    <LinearGradient colors={['#4087e1', '#2b5a9c']} style={styles.gradient}>
-                        <FontAwesome name='plus' size={50} color='#ffffff' />
-                    </LinearGradient>
-                </TouchableOpacity>
+                    {/*If pressed on the create ticket button*/}
+                    <TouchableOpacity 
+                        onPress={() => navigation.navigate('Create Ticket')} 
+                        style={styles.gradient}
+                    >
+                        <FontAwesome name='plus' size={30} color='#ffffff' />
+                    </TouchableOpacity>
             </BlurView>
         </ImageBackground>
     );
@@ -78,27 +163,51 @@ const styles = StyleSheet.create({
     },
     blurView: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.35)',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    loadingContainer: {
+        position: 'absolute',
+        top: 50,
+        alignSelf: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        color: '#fff',
+        marginTop: 10,
+        fontSize: 16,
     },
     scrollView: {
-        alignItems: 'center',
-        padding:20
+        padding: 15,
     },
     card: {
-        backgroundColor: '#ffffff',
-        borderRadius: 12,
         marginBottom: 15,
-        padding: 15,
-        width: '100%',
-        maxWidth: 400,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 5,
+        borderRadius: 15,
+        overflow: 'hidden',
+    },
+    cardGradient: {
+        borderRadius: 15,
+        overflow: 'hidden',
+    },
+    statusBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+    },
+    statusIndicator: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 8,
+    },
+    statusText: {
+        color: '#fff',
+        fontSize: 12,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     cardContent: {
-        flexDirection: 'column',
+        padding: 15,
     },
     headerRow: {
         flexDirection: 'row',
@@ -107,48 +216,63 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     headingText: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#fff',
     },
-    icon: {
-        justifyContent: 'center',
+    iconButton: {
+        padding: 8,
+        backgroundColor: 'rgba(108, 92, 231, 0.1)',
+        borderRadius: 8,
     },
-    detailRow: {
+    subjectText: {
+        fontSize: 16,
+        color: '#fff',
+        marginBottom: 15,
+        lineHeight: 24,
+    },
+    detailsContainer: {
         flexDirection: 'row',
-        paddingVertical: 4,
+        flexWrap: 'wrap',
+        marginTop: 5,
     },
-    label: {
-        fontWeight: 'bold',
-        color: '#555',
-    },
-    detail: {
-        color: '#333',
-        marginLeft: 5,
-    },
-    nothingHere: {
-        flex: 1,
-        justifyContent: 'center',
+    detailItem: {
+        flexDirection: 'row',
         alignItems: 'center',
-        padding: 20,
+        marginRight: 15,
+        marginBottom: 5,
     },
-    nothingText: {
-        color: 'gray',
-        fontSize: 18,
-        fontStyle: 'italic',
+    detailText: {
+        color: '#a4b0be',
+        marginLeft: 6,
+        fontSize: 13,
     },
-    addButton: {
-        position: 'absolute',
-        right: 30,
-        bottom: 30,
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 40,
+        height: Dimensions.get('window').height * 0.7,
+    },
+    emptyText: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 20,
+        marginTop: 20,
+        fontWeight: '600',
+    },
+    emptySubText: {
+        color: 'rgba(255,255,255,0.5)',
+        fontSize: 14,
+        marginTop: 10,
     },
     gradient: {
-        borderRadius: 50,
-        padding: 15,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.5,
-        shadowRadius: 5,
-        elevation: 5,
+        position: 'absolute',
+        right: 20,
+        bottom: 30,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor:'#4CAF50'
     },
 });

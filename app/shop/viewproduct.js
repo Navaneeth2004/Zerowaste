@@ -1,285 +1,557 @@
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ImageBackground, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, TextInput, Modal, ActivityIndicator } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
-import BackgroundImage from '../../assets/profile/profile.jpg';
+import React, { useEffect, useState } from 'react';
+import { Picker } from '@react-native-picker/picker';
+import { useUser } from '../storage';
+import Toast from 'react-native-toast-message';
+
+import PocketBase from 'pocketbase';
+const pb = new PocketBase('https://zero.pockethost.io');
 
 export const ViewProduct = ({ navigation }) => {
-  const productDict = {
-    201: {
-      name: 'Laptop Stand',
-      category: 'Accessories',
-      price: 79.99,
-      lastImageUrl: 'https://ergonofis.com/cdn/shop/products/Artboard8.png?crop=center&height=2048&v=1675976402&width=2048',
-      stockQuantity: 10,
-      description: 'A sturdy laptop stand for better ergonomics.',
-      rating: 4.5,
-      lastitem:false
-    },
-    202: {
-      name: 'Smartphone Case',
-      category: 'Accessories',
-      price: 29.99,
-      lastImageUrl: 'https://goldenconcept.in/cdn/shop/files/C-14PM-W-CE-BK-G-0002_490x_015e67d1-3681-4ae4-a748-e1a1ddc44e70_490x.png?v=1686212925',
-      stockQuantity: 25,
-      description: 'Stylish case for your smartphone.',
-      rating: 4.0,
-      lastitem:false
-    },
-    203: {
-      name: 'Coffee Maker',
-      category: 'Appliances',
-      price: 109.99,
-      lastImageUrl: 'https://www.bialetti.com/media/catalog/product/cache/e8aa104d064dcf81ed9afb1c9c6893f4/g/i/gioia-responsible-lato.png',
-      stockQuantity: 15,
-      description: 'Brew delicious coffee every morning.',
-      rating: 4.8,
-      lastitem:false
-    },
-    204: {
-      name: 'Desk Chair',
-      category: 'Furniture',
-      price: 159.99,
-      lastImageUrl: 'https://static.wixstatic.com/media/c01599_640381ad3061434b9a1b57e18fc2c3d7~mv2.png/v1/crop/x_831,y_0,w_2178,h_2160/fill/w_560,h_632,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/Spaceforme%20EN%2050%20Chair%20GR%20Angle.png',
-      stockQuantity: 5,
-      description: 'Comfortable ergonomic desk chair.',
-      rating: 4.7,
-      lastitem:false
-    },
-    205: {
-      name: 'Headphones',
-      category: 'Accessories',
-      price: 69.99,
-      lastImageUrl: 'https://www.sony-asia.com/image/2ab749ab3983bdeb6b2187653f12f792?fmt=png-alpha&wid=440',
-      stockQuantity: 20,
-      description: 'Noise-canceling over-ear headphones.',
-      rating: 4.6,
-      lastitem:false
-    },
-    206: {
-      name: 'Water Bottle',
-      category: 'Accessories',
-      price: 18.99,
-      lastImageUrl: 'https://www.bigbasket.com/media/uploads/p/xl/40129975_7-cello-water-bottle-h2o-purple.jpg',
-      stockQuantity: 50,
-      description: 'Durable water bottle for everyday use.',
-      rating: 4.2,
-      lastitem:false
-    },
-    207: {
-      name: 'Pencil',
-      category: 'Stationery',
-      price: 1.99,
-      lastImageUrl: 'https://www.promotionalwears.com/image/cache/catalog/data/pencil/natraj-621-bold-writing-pencil-750x750.png',
-      stockQuantity: 100,
-      description: 'High-quality writing pencil.',
-      rating: 4.1,
-      lastitem:false
-    },
-    208: {
-      name: 'Notebook',
-      category: 'Stationery',
-      price: 15.99,
-      lastImageUrl: 'https://www.theumbrellastore.in/cdn/shop/products/51yRq76FiUL-removebg-preview.png?v=1649674334',
-      stockQuantity: 30,
-      description: 'Spiral-bound notebook for your notes.',
-      rating: 4.5,
-      lastitem:false
-    },
 
+  const { userData } = useUser();
+
+    const [search, setSearch] = useState('');
+    const [isModalVisible, setModalVisible] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [filterCriteria, setFilterCriteria] = useState({
+        category: '',
+        minPrice: '',
+        maxPrice: '',
+        minRating: '',
+    });
+    const [productDict, setproductDict] = useState({
+        name: '',
+        category: '',
+        price: 0,
+        minRating: '',
+        lastImageUrl:'',
+        stockQuantity:0,
+        description:'',
+        rating:0
+    });
+
+    useEffect(() => {
+        fetchProducts();
+      }, []);
+    
+      const fetchProducts = async () => {
+        setIsLoading(true);
+        try {
+          const resultList = await pb.collection('product').getList(1, 50);
+          const products = {};
+          
+          for (const product of resultList.items) {
+            products[product.id] = {
+              name: product.product_name,
+              category: product.category_id,
+              price: product.price,
+              lastImageUrl: product.image_url,
+              stockQuantity: product.stock_quantity,
+              description: product.description,
+              rating: product.average_rating,
+            };
+          }
+          
+          setproductDict(products);
+        } catch (error) {
+          Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: 'Error fetching products',
+            position: 'top',
+            visibilityTime: 3000,
+          });
+          console.error('Error fetching products:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+    const filteredProducts = Object.entries(productDict || {}).filter(([id, item]) => {
+    const matchesSearch = item.name?.toLowerCase().includes(search.toLowerCase()) ||
+                            item.category?.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = filterCriteria.category ? item.category === filterCriteria.category : true;
+    const matchesPrice = (filterCriteria.minPrice ? item.price >= parseFloat(filterCriteria.minPrice) : true) &&
+                            (filterCriteria.maxPrice ? item.price <= parseFloat(filterCriteria.maxPrice) : true);
+    const matchesRating = (filterCriteria.minRating ? item.rating >= parseFloat(filterCriteria.minRating) : true);
+    
+    return matchesSearch && matchesCategory && matchesPrice && matchesRating;
+
+    });
+
+  const filterProduct = () => {
+    setModalVisible(true);
   };
 
-  const [search, setSearch] = useState('');
-  const filteredProducts = Object.entries(productDict).filter(([id, item]) =>
-    item.name.toLowerCase().includes(search.toLowerCase()) ||
-    item.category.toLowerCase().includes(search.toLowerCase())
-  );
+  const applyFilter = () => {
+    setFilterCriteria({ ...filterCriteria, category: selectedCategory });
+    setModalVisible(false);
+  };
 
-  if(filteredProducts.length>0)
-  {
-    const lastindex = filteredProducts.length-1
-    const lastProduct = filteredProducts[lastindex];
-    lastProduct[1].lastitem = true;
-  }
+  const resetFilters = () => {
+    setFilterCriteria({
+      category: '',
+      minPrice: '',
+      maxPrice: '',
+      minRating: '',
+    });
+    setSearch('');
+  };
 
   return (
-    <ImageBackground source={BackgroundImage} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={{flexDirection:'row',alignItems:'center'}}>
-          <View style={styles.searchBar}>
-            <TextInput
-              style={styles.searchInput}
-              onChangeText={setSearch}
-              placeholder='Search'
-              placeholderTextColor="#bbb"
-            />
-            <TouchableOpacity style={styles.iconContainer}>
-              <FontAwesome name='filter' size={25} color="black" />
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity onPress={()=>navigation.navigate('Cart')} style={[styles.cartcontainer]}>
-            <FontAwesome name='shopping-cart' size={25} color="black" />
-          </TouchableOpacity>
-        </View>
-        {filteredProducts.length > 0 ? (
-          filteredProducts.map(([id, item]) => (
-            <TouchableOpacity key={id} style={[styles.productDetails, item.lastitem ? styles.lastItem : null]}>
-              <View style={styles.imagecontainer}>
-                <Image source={{ uri: item.lastImageUrl }} style={styles.productImage} />
-              </View>
-              <View style={styles.productInfo}>
-                <Text style={styles.productName}>{item.name}</Text>
-                <Text style={styles.productCategory}>{item.category}</Text>
-                <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
-                <Text style={styles.productDescription}>{item.description}</Text>
-                <Text style={styles.productStock}>Quantity: {item.stockQuantity}</Text>
-                <Text style={styles.productRating}>Rating: {item.rating} ★</Text>
-              </View>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Nothing here...</Text>
-          </View>
-        )}
-      </ScrollView>
-      <LinearGradient
-        colors={['#23374D', '#416788']}
-        style={styles.bottomTab}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-      >
-        <TouchableOpacity onPress={() => navigation.navigate('Recycle Bin')}>
-          <FontAwesome style={styles.icon} name="recycle" size={30} color="#fff" />
-          <Text style={styles.tabLabel}>Recycle</Text>
-        </TouchableOpacity>
-        <TouchableOpacity>
-          <FontAwesome style={styles.icon} name="shopping-cart" size={30} color="#85dfdf" />
-          <Text style={styles.tabLabel}>Shop</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-          <FontAwesome style={styles.icon} name="user-circle" size={30} color="#fff" />
-          <Text style={styles.tabLabel}>Profile</Text>
-        </TouchableOpacity>
-      </LinearGradient>
-    </ImageBackground>
-  );
-}
+    <View style={styles.container}>
+        <LinearGradient
+            colors={['#161925', '#23395d']}
+            style={styles.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+        >
+            <View style={styles.header}>
+                <View style={styles.searchContainer}>
+                    <View style={styles.searchBar}>
+                        <FontAwesome name='search' size={18} color="#8EBBFF" />
+                        <TextInput
+                            style={styles.searchInput}
+                            onChangeText={setSearch}
+                            placeholder='Search products...'
+                            placeholderTextColor="#566583"
+                        />
+                        <TouchableOpacity style={styles.filterButton} onPress={filterProduct}>
+                            <FontAwesome name='sliders' size={18} color="#8EBBFF" />
+                        </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity style={styles.filterButton} onPress={()=>navigation.navigate('Cart')}>
+                        <FontAwesome name='shopping-cart' size={18} color="#8EBBFF" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+                {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#8EBBFF" />
+                        <Text style={styles.loadingText}>Loading products...</Text>
+                    </View>
+                ) : (
+                    <View style={styles.gridContainer}>
+                        {filteredProducts.length > 0 ? (
+                            filteredProducts.map(([id, item]) => (
+                                <TouchableOpacity 
+                                    key={id} 
+                                    style={styles.productCard}
+                                    onPress={() => navigation.navigate('Product',{ id: id })}
+                                >
+                                    <Image source={{ uri: item.lastImageUrl }} style={styles.productImage} />
+                                    <View style={styles.productContent}>
+                                        <View style={styles.productHeader}>
+                                            <Text style={styles.productName}>{item.name}</Text>
+                                            <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
+                                        </View>
+                                        <Text style={styles.productCategory}>{item.category}</Text>
+                                        <Text style={styles.productDescription} numberOfLines={2}>
+                                            {item.description}
+                                        </Text>
+                                        <View style={styles.productFooter}>
+                                            <View style={styles.ratingContainer}>
+                                                <FontAwesome name="star" size={12} color="#8EBBFF" />
+                                                <Text style={styles.ratingText}>{item.rating}</Text>
+                                            </View>
+                                            <Text style={styles.stockText}>
+                                                {item.stockQuantity} left
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            ))
+                        ) : (
+                            <View style={styles.emptyState}>
+                                <FontAwesome name="search" size={40} color="#8EBBFF" />
+                                <Text style={styles.emptyText}>No products found</Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+            </ScrollView>
+
+            <View style={styles.bottomNav}>
+                <TouchableOpacity 
+                    style={styles.navItem}
+                    onPress={() => navigation.navigate('Recycle Bin')}
+                >
+                    <FontAwesome name="recycle" size={24} color="#6B7280" />
+                    <Text style={styles.navText}>Recycle</Text>
+                </TouchableOpacity>
+                {
+                userData.role!="seller"?
+                    <TouchableOpacity 
+                        style={styles.navItem}
+                        onPress={() => navigation.navigate('Jobs')}
+                    >
+                        <FontAwesome name="clipboard" size={24} color="#6B7280" />
+                        <Text style={styles.navText}>Jobs</Text>
+                    </TouchableOpacity>
+                : null
+                }
+                <TouchableOpacity 
+                    style={styles.navItem}
+                >
+                    <FontAwesome name="shopping-cart" size={24} color="#3B82F6" />
+                    <Text style={[styles.navText,styles.activeNavText]}>Shop</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={styles.navItem}
+                    onPress={() => navigation.navigate('BaseProfile')}
+                >
+                    <FontAwesome name="user-circle" size={24} color="#6B7280" />
+                    <Text style={styles.navText}>Profile</Text>
+                </TouchableOpacity>
+            </View>
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={isModalVisible}
+                onRequestClose={() => setModalVisible(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Filters</Text>
+                            <TouchableOpacity 
+                                style={styles.closeButton} 
+                                onPress={() => setModalVisible(false)}
+                            >
+                                <FontAwesome name="times" size={20} color="#566583" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.filterSection}>
+                            <Text style={styles.filterLabel}>Category</Text>
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={selectedCategory}
+                                    onValueChange={setSelectedCategory}
+                                    style={styles.picker}
+                                    dropdownIconColor="#8EBBFF"
+                                >
+                                    <Picker.Item label="All Categories" value="" />
+                                    <Picker.Item label="Accessories" value="Accessories" />
+                                    <Picker.Item label="Appliances" value="Appliances" />
+                                    <Picker.Item label="Furniture" value="Furniture" />
+                                    <Picker.Item label="Stationery" value="Stationery" />
+                                </Picker>
+                            </View>
+
+                            <Text style={styles.filterLabel}>Price Range</Text>
+                            <View style={styles.rangeInputs}>
+                                <TextInput
+                                    style={[styles.filterInput, styles.halfInput]}
+                                    placeholder="Min"
+                                    placeholderTextColor="#566583"
+                                    keyboardType="numeric"
+                                    onChangeText={(text) => setFilterCriteria({ ...filterCriteria, minPrice: text })}
+                                />
+                                <TextInput
+                                    style={[styles.filterInput, styles.halfInput]}
+                                    placeholder="Max"
+                                    placeholderTextColor="#566583"
+                                    keyboardType="numeric"
+                                    onChangeText={(text) => setFilterCriteria({ ...filterCriteria, maxPrice: text })}
+                                />
+                            </View>
+
+                            <Text style={styles.filterLabel}>Minimum Rating</Text>
+                            <TextInput
+                                style={styles.filterInput}
+                                placeholder="Enter minimum rating"
+                                placeholderTextColor="#566583"
+                                keyboardType="numeric"
+                                onChangeText={(text) => setFilterCriteria({ ...filterCriteria, minRating: text })}
+                            />
+                        </View>
+
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity 
+                                style={[styles.modalButton, styles.resetButton]} 
+                                onPress={resetFilters}
+                            >
+                                <Text style={styles.resetButtonText}>Reset</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={[styles.modalButton, styles.applyButton]} 
+                                onPress={applyFilter}
+                            >
+                                <Text style={styles.applyButtonText}>Apply</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        </LinearGradient>
+    </View>
+);
+};
 
 const styles = StyleSheet.create({
-  container: {
+container: {
     flex: 1,
-  },
-  scrollContainer: {
-    padding: 20,
-  },
-  searchBar: {
+    backgroundColor: '#161925',
+},
+gradient: {
+    flex: 1,
+},
+header: {
+    paddingTop: 48,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+},
+searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 25,
-    paddingHorizontal: 10,
-    marginBottom: 30,
-    backgroundColor: '#ffffff',
-    elevation: 5,
-    marginTop:30,
-    width:'85%'
-  },
-  cartcontainer:{
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 25,
-    padding:10,
-    backgroundColor: '#ffffff',
-    elevation: 5,
-    marginLeft:10
-  },
-  searchInput: {
+    gap: 12,
+},
+searchBar: {
     flex: 1,
-    height: 40,
-    paddingHorizontal: 10,
-    color: '#333',
-  },
-  iconContainer: {
-    padding: 10,
-  },
-  productDetails: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 15,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-  },
-  lastItem: {
-    marginBottom: 100,
-  },
-  imagecontainer:{
-    justifyContent:'center'
-  },
-  productImage: {
-    width: 100,
-    height: 120,
-    borderRadius: 10,
-    marginRight: 15,
-  },
-  productInfo: {
+    alignItems: 'center',
+    backgroundColor: '#1f2937',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 46,
+    gap: 12,
+},
+searchInput: {
     flex: 1,
-  },
-  productName: {
-    fontWeight: 'bold',
-    fontSize: 18,
-    color: '#333',
-  },
-  productCategory: {
-    color: '#888',
-    marginBottom: 5,
-  },
-  productPrice: {
-    color: '#27ae60',
+    color: '#fff',
     fontSize: 16,
-    marginVertical: 5,
-  },
-  productDescription: {
-    color: '#555',
-    marginBottom: 5,
-  },
-  productStock: {
-    color: '#333',
-    marginBottom: 5,
-  },
-  productRating: {
-    color: '#f39c12',
-  },
-  emptyState: {
+},
+filterButton: {
+    width: 46,
+    height: 46,
+    backgroundColor: '#1f2937',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 50,
-  },
-  emptyText: {
-    color: 'gray',
+},
+scrollContainer: {
+    padding: 16,
+},
+gridContainer: {
+    gap: 16,
+    paddingBottom: 100,
+},
+productCard: {
+    backgroundColor: '#1f2937',
+    borderRadius: 16,
+    overflow: 'hidden',
+},
+productImage: {
+    width: '100%',
+    height: 180,
+    resizeMode: 'cover',
+},
+productContent: {
+    padding: 16,
+    gap: 8,
+},
+productHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+},
+productName: {
     fontSize: 18,
-  },
-  bottomTab: {
+    fontWeight: '600',
+    color: '#fff',
+    flex: 1,
+},
+productPrice: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#8EBBFF',
+    marginLeft: 8,
+},
+productCategory: {
+    fontSize: 14,
+    color: '#566583',
+},
+productDescription: {
+    fontSize: 14,
+    color: '#9ca3af',
+    lineHeight: 20,
+},
+productFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+},
+ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+},
+ratingText: {
+    color: '#8EBBFF',
+    fontSize: 14,
+    fontWeight: '500',
+},
+stockText: {
+    color: '#566583',
+    fontSize: 14,
+},
+emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    gap: 16,
+},
+emptyText: {
+    color: '#566583',
+    fontSize: 16,
+},
+bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 12,
+    paddingBottom: 28,
+    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(75, 85, 99, 0.3)',
+},
+  navItem: {
+    alignItems: 'center',
+    gap: 4,
+},
+  navText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+},
+  activeNavText: {
+    color: '#3B82F6',
+},
+centerButton: {
+    marginBottom: 20,
+},
+gradientButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+},
+modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(22, 25, 37, 0.9)',
+    justifyContent: 'flex-end',
+},
+modalContent: {
+    backgroundColor: '#1f2937',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+},
+modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+},
+modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+},
+closeButton: {
+    padding: 8,
+},
+filterSection: {
+    gap: 16,
+},
+filterLabel: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 8,
+},
+pickerContainer: {
+    backgroundColor: '#161925',
+    borderRadius: 12,
+    marginBottom: 8,
+},
+picker: {
+    color: '#fff',
+},
+rangeInputs: {
+    flexDirection: 'row',
+    gap: 12,
+},
+filterInput: {
+    backgroundColor: '#161925',
+    borderRadius: 12,
+    padding: 12,
+    color: '#fff',
+    fontSize: 16,
+},
+halfInput: {
+    flex: 1,
+},
+modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+},
+modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+},
+resetButton: {
+    backgroundColor: '#161925',
+},
+resetButtonText: {
+    color: '#566583',
+    fontSize: 16,
+    fontWeight: '600',
+},
+applyButton: {
+    backgroundColor: '#8EBBFF',
+},
+applyButtonText: {
+    color: '#161925',
+    fontSize: 16,
+    fontWeight: '600',
+},
+bottomTab: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingBottom:20,
     position: 'absolute',
     bottom: 0,
     width: '100%',
-  },
-  icon: {
-    alignSelf: 'center',
-  },
-  tabLabel: {
-    color: '#fff',
-    fontSize: 14,
-    textAlign: 'center',
-  },
+},
+tabButton: {
+    alignItems: 'center',
+    opacity: 0.8,
+},
+loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 300,
+    gap: 16,
+},
+  loadingText: {
+    color: '#8EBBFF',
+    fontSize: 16,
+    fontWeight: '500',
+},
 });

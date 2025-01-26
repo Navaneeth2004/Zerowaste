@@ -1,51 +1,95 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ImageBackground } from 'react-native';
+//Importing important libraries
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ImageBackground, Clipboard } from 'react-native';
 import { BlurView } from 'expo-blur';
-import React from 'react';
+import React, { useState } from 'react';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 
-import BackgroundImage from '../../../assets/profile/profile.jpg';
+//Importing background image
+import BackgroundImage from '../../../assets/profile/profile2.jpg';
 
 export const BoughtProduct = () => {
+    //Demo eco friendly products
     const productDict = {
-        201: { name: 'Laptop Stand', category: 'Accessories', price: 79.99, date: '10-Sep-2024', lastImageUrl: 'https://ergonofis.com/cdn/shop/products/Artboard8.png?crop=center&height=2048&v=1675976402&width=2048' },
-        202: { name: 'Smartphone Case', category: 'Accessories', price: 29.99, date: '15-Sep-2024', lastImageUrl: 'https://goldenconcept.in/cdn/shop/files/C-14PM-W-CE-BK-G-0002_490x_015e67d1-3681-4ae4-a748-e1a1ddc44e70_490x.png?v=1686212925' },
-        203: { name: 'Coffee Maker', category: 'Appliances', price: 109.99, date: '18-Sep-2024', lastImageUrl: 'https://www.bialetti.com/media/catalog/product/cache/e8aa104d064dcf81ed9afb1c9c6893f4/g/i/gioia-responsible-lato.png' },
-        204: { name: 'Desk Chair', category: 'Furniture', price: 159.99, date: '20-Sep-2024', lastImageUrl: 'https://static.wixstatic.com/media/c01599_640381ad3061434b9a1b57e18fc2c3d7~mv2.png/v1/crop/x_831,y_0,w_2178,h_2160/fill/w_560,h_632,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/Spaceforme%20EN%2050%20Chair%20GR%20Angle.png' },
-        205: { name: 'Headphones', category: 'Accessories', price: 69.99, date: '23-Sep-2024', lastImageUrl: 'https://www.sony-asia.com/image/2ab749ab3983bdeb6b2187653f12f792?fmt=png-alpha&wid=440' },
-        206: { name: 'Water Bottle', category: 'Accessories', price: 18.99, date: '25-Sep-2024', lastImageUrl: 'https://www.bigbasket.com/media/uploads/p/xl/40129975_7-cello-water-bottle-h2o-purple.jpg' },
-        207: { name: 'Pencil', category: 'Stationery', price: 1.99, date: '01-Oct-2024', lastImageUrl: 'https://www.promotionalwears.com/image/cache/catalog/data/pencil/natraj-621-bold-writing-pencil-750x750.png' },
-        208: { name: 'Notebook', category: 'Stationery', price: 15.99, date: '05-Oct-2024', lastImageUrl: 'https://www.theumbrellastore.in/cdn/shop/products/51yRq76FiUL-removebg-preview.png?v=1649674334' }
+        301: { 
+            name: 'Recycled Paper book', 
+            category: 'Stationery', 
+            price: 24.55, 
+            date: '10-Oct-2024', 
+            lastImageUrl: 'https://static.wixstatic.com/media/a7b922_a8daa5d89f494cfbb4ba39e329988581~mv2.png/v1/fill/w_550,h_438,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/a7b922_a8daa5d89f494cfbb4ba39e329988581~mv2.png' 
+        },
+        302: { 
+            name: 'Bamboo Pencils', 
+            category: 'Stationery', 
+            price: 10.89, 
+            date: '12-Oct-2024', 
+            lastImageUrl: 'https://57cbfd06.rocketcdn.me/wp-content/uploads/2023/12/Bamboo-Pen.png' 
+        },
+        303: { 
+            name: 'Reusable Water Bottle', 
+            category: 'Accessories', 
+            price: 48.99, 
+            date: '15-Oct-2024', 
+            lastImageUrl: 'https://static.vecteezy.com/system/resources/thumbnails/022/024/695/small_2x/gray-bottle-isolated-on-a-transparent-background-png.png' 
+        }
     };
 
+    //State variable for tracking copied ID
+    const [copiedId, setCopiedId] = useState(null);
+
+    //To handle clipboard functionality
+    const handleCopyId = (id) => {
+        Clipboard.setString(id.toString());
+        setCopiedId(id);
+        
+        // Reset the copied state after 2 seconds
+        setTimeout(() => {
+            setCopiedId(null);
+        }, 2000);
+    };
+    
     return (
         <ImageBackground source={BackgroundImage} style={styles.background}>
-            <BlurView intensity={80} style={styles.blurView}>
+            <BlurView intensity={90} tint="dark" style={styles.blurView}>
                 <ScrollView contentContainerStyle={styles.scrollView}>
                     {Object.entries(productDict).length > 0 ? (
                         Object.entries(productDict).map(([id, item]) => (
                             <View key={id} style={styles.card}>
-                                <View style={styles.cardHeader}>
-                                    <View style={styles.headerRow}>
-                                        <Text style={styles.headingText}>ID: {id}</Text>
-                                        <TouchableOpacity style={styles.icon}>
-                                            <FontAwesome name='copy' size={15} color='white' />
-                                        </TouchableOpacity>
-                                    </View>
-                                    <View style={styles.infoContainer}>
-                                        <Text style={styles.infoText}>Product: <Text style={styles.highlight}>{item.name}</Text></Text>
-                                        <Text style={styles.infoText}>Category: <Text style={styles.highlight}>{item.category}</Text></Text>
-                                        <Text style={styles.infoText}>Price: <Text style={styles.highlight}>${item.price.toFixed(2)}</Text></Text>
-                                        <Text style={styles.infoText}>Date: <Text style={styles.highlight}>{item.date}</Text></Text>
-                                    </View>
-                                </View>
                                 <View style={styles.imageContainer}>
                                     <Image source={{ uri: item.lastImageUrl }} style={styles.productImage} />
+                                    <View style={styles.categoryTag}>
+                                        <Text style={styles.categoryText}>{item.category}</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.cardContent}>
+                                    <View style={styles.headerRow}>
+                                        <View style={styles.productInfoContainer}>
+                                            <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+                                            <Text style={styles.date}>{item.date}</Text>
+                                        </View>
+                                        <View style={styles.priceContainer}>
+                                            <Text style={styles.price}>₹{item.price.toFixed(2)}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.idContainer}>
+                                        <Text style={styles.idText}>ID: {id}</Text>
+                                        <TouchableOpacity 
+                                            style={[styles.copyButton, copiedId === parseInt(id) && styles.copyButtonActive]}
+                                            onPress={() => handleCopyId(id)}
+                                        >
+                                            <FontAwesome 
+                                                name={copiedId === parseInt(id) ? 'check' : 'copy'} 
+                                                size={14} 
+                                                color='#fff' 
+                                            />
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
                             </View>
                         ))
                     ) : (
                         <View style={styles.nothingHere}>
-                            <Text style={styles.nothingText}>Nothing here...</Text>
+                            <FontAwesome name="shopping-bag" size={50} color="#666" />
+                            <Text style={styles.nothingText}>No purchases yet</Text>
                         </View>
                     )}
                 </ScrollView>
@@ -61,69 +105,113 @@ const styles = StyleSheet.create({
     },
     blurView: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.35)',
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
     },
     scrollView: {
-        padding: 20,
+        padding: 16,
     },
     card: {
-        backgroundColor: '#9ac8d1',
-        borderRadius: 10,
-        marginBottom: 20,
-        padding: 15,
+        backgroundColor: 'rgba(30, 30, 30, 0.9)',
+        borderRadius: 16,
+        marginBottom: 16,
+        overflow: 'hidden',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 6,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
-    cardHeader: {
-        marginBottom: 10,
+    imageContainer: {
+        position: 'relative',
+        height: 200,
+        backgroundColor: '#2a2a2a',
+    },
+    productImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'contain',
+    },
+    categoryTag: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    categoryText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    cardContent: {
+        padding: 16,
     },
     headerRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 12,
     },
-    headingText: {
+    productInfoContainer: {
+        flex: 1,
+        marginRight: 12,
+    },
+    productName: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#fff',
+        marginBottom: 4,
+        flexWrap: 'wrap',
     },
-    icon: {
-        backgroundColor: '#6a3e82',
-        justifyContent: 'center',
-        padding:5,
-        borderRadius: 5,
-        
+    date: {
+        fontSize: 14,
+        color: '#999',
     },
-    infoContainer: {
-        marginTop: 5,
-    },
-    infoText: {
-        fontSize: 16,
-        color: '#555',
-    },
-    highlight: {
-        fontWeight: 'bold',
-        color: '#6a3e82',
-    },
-    imageContainer: {
+    priceContainer: {
+        backgroundColor: '#FF9800',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        minWidth: 80,
         alignItems: 'center',
-        marginTop: 10,
     },
-    productImage: {
-        width: 120,
-        height: 120,
-        borderRadius: 10,
+    price: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    idContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    idText: {
+        color: '#999',
+        fontSize: 14,
+        flex: 1,
+    },
+    copyButton: {
+        padding: 8,
+        borderRadius: 4,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    copyButtonActive: {
+        backgroundColor: '#4CAF50',
     },
     nothingHere: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: 40,
     },
     nothingText: {
-        color: 'gray',
+        color: '#666',
         fontSize: 18,
+        marginTop: 12,
     },
 });
